@@ -7,8 +7,8 @@ import Button from '../UI/Button/Button';
 const Login = (props) => {
   // const [enteredEmail, setEnteredEmail] = useState('');
   // const [emailIsValid, setEmailIsValid] = useState();
-  const [enteredPassword, setEnteredPassword] = useState('');
-  const [passwordIsValid, setPasswordIsValid] = useState();
+  // const [enteredPassword, setEnteredPassword] = useState('');
+  // const [passwordIsValid, setPasswordIsValid] = useState();
   const [formIsValid, setFormIsValid] = useState(false);
 
   //Cette fonction peut être déclarée outside of the scope parce que pas d'interaction avec quoique ce soit de défini dans le composant
@@ -27,31 +27,51 @@ const Login = (props) => {
     isValid: null
   });
 
-  // useEffect(() => {
-  //   const identifier = setTimeout(()=>{
-  //     setFormIsValid(
-  //       enteredEmail.includes('@') && enteredPassword.trim().length > 6
-  //     );
-  //   }, 500);
-  //   return () => {
-  //     clearTimeout(identifier);
-  //   }; // Clean up function
-  // }, [enteredEmail, enteredPassword]);
+  const passwordReducer = (state,action) => {
+    if (action.type === 'USER_INPUT') {
+      return {value: action.val, isValid: action.val.trim().length > 6};
+    }
+    if (action.type === 'INPUT_BLUR') {
+      return {value: state.value, isValid: state.value.trim().length > 6}; // on ne laisse pas value vide car l'input peut blur une fois que l'user a mis quelque chose
+    }
+    return {value: '', isValid: false};
+  };
+
+  const [passwordState, dispatchPassword] = useReducer(passwordReducer, {
+    value : '',
+    isValid: null
+  });
+
+  //Assigner un alias -> object destructuring syntax => passer certaines propriétés plutôt que l'objet entier
+  const {isValid: emailIsValid} = emailState;
+  const {isValid: passwordIsValid} = passwordState;
+
+
+  useEffect(() => {
+    const identifier = setTimeout(()=>{
+      setFormIsValid(
+        emailIsValid && passwordIsValid
+      );
+    }, 500);
+    return () => {
+      clearTimeout(identifier);
+    }; // Clean up function
+  }, [emailIsValid, passwordIsValid]); //utilisation de ces constantes cô ça si la valeur change mais pas la validité, cet effet ne rerun pas
 
   const emailChangeHandler = (event) => {
     dispatchEmail({type: 'USER_INPUT', val: event.target.value});
 
-    setFormIsValid(
-      event.target.value.includes('@') && enteredPassword.trim().length > 6
-    );
+    // setFormIsValid(
+    //   event.target.value.includes('@') && passwordState.isValid
+    // );
   };
 
   const passwordChangeHandler = (event) => {
-    setEnteredPassword(event.target.value);
+    dispatchPassword({type: 'USER_INPUT', val: event.target.value})
 
-    setFormIsValid(
-      emailState.isValid && event.target.value.trim().length > 6
-    );
+    // setFormIsValid(
+    //   emailState.isValid && event.target.value.trim().length > 6
+    // );
   };
 
   const validateEmailHandler = () => {
@@ -59,12 +79,12 @@ const Login = (props) => {
   };
 
   const validatePasswordHandler = () => {
-    setPasswordIsValid(enteredPassword.trim().length > 6);
+    dispatchPassword({type: 'INPUT_BLUR'})
   };
 
   const submitHandler = (event) => {
     event.preventDefault();
-    props.onLogin(emailState.value, enteredPassword);
+    props.onLogin(emailState.value, passwordState.value);
   };
 
   return (
@@ -86,14 +106,14 @@ const Login = (props) => {
         </div>
         <div
           className={`${classes.control} ${
-            passwordIsValid === false ? classes.invalid : ''
+            passwordState.isValid === false ? classes.invalid : ''
           }`}
         >
           <label htmlFor="password">Password</label>
           <input
             type="password"
             id="password"
-            value={enteredPassword}
+            value={passwordState.value}
             onChange={passwordChangeHandler}
             onBlur={validatePasswordHandler}
           />
